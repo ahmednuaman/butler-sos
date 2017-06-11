@@ -1,6 +1,14 @@
 // Add dependencies
 var request = require('request');
-var restify = require('restify');
+
+// Dependencies for REST server
+var express = require('express');
+var bodyParser = require('body-parser');
+var _ = require('lodash');
+var app = express();
+
+app.use(bodyParser.json());
+
 
 
 // Load code from sub modules
@@ -13,10 +21,7 @@ var globals = require('./globals');
 globals.logger.transports.console.level = 'verbose';
 // globals.logger.transports.console.level = 'debug';
 
-globals.logger.info('Starting Butler SOS/Influxdb');
-
-
-
+globals.logger.info('Starting Butler SOS');
 
 
 
@@ -153,7 +158,7 @@ function postToInfluxdb(host, serverName, body) {
 function postToMQTT(host, serverName, body) {
 
     // Get base MQT topic
-    var baseTopic = globals.config.get('Butler-SOS-Influxdb.mqttConfig.baseTopic');
+    var baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
     // Send to MQTT
     globals.mqttClient.publish(baseTopic + serverName + '/version', body.version);
@@ -219,37 +224,115 @@ function getStatsFromSense(host, serverName) {
 
 
 
-
 var restServer = restify.createServer({
-    name: 'Butler SOS',
+    name: 'Butler SOS Loaded apps REST API',
     version: '1.0.0',
-    certificate: fs.readFileSync(config.get('sslCertPath')),
-    key: fs.readFileSync(config.get('sslCertKeyPath'))
+    certificate: fs.readFileSync(config.get('Butler-SOS.restServer.sslCertPath')),
+    key: fs.readFileSync(config.get('Butler-SOS.restServer.sslCertKeyPath'))
 });
 
-
-// Enable parsing of http parameters
-restServer.use(restify.queryParser());
-
-// Set up CORS handling
-restServer.use(restify.CORS({ origins: ['*'] }));
 
 // Set up endpoints for REST server
-restServer.get('/duplicateNewScript', respondDuplicateNewScript);
-restServer.get('/duplicateKeepScript', respondDuplicateKeepScript);
-restServer.get('/getTemplateList', respondGetTemplateList);
+restServer.get('/loadedAppNames', respondAppName);
+restServer.get('/loadedAppNames/search', respondAppName_Search);
+restServer.get('/loadedAppNames/query', respondAppName_Query);
+restServer.get('/loadedAppNames/annotations', respondAppName_Annotation);
 
 
-// Start the server
-restServer.listen(8001, function () {
-    console.log('%s listening at %s', restServer.name, restServer.url);
+function setCORSHeaders(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST");
+  res.setHeader("Access-Control-Allow-Headers", "accept, content-type");  
+}
+
+
+
+
+
+
+// Handler for REST endpoint /loadedAppNames
+// URL parameters
+//   -- None --
+app.all('/loadedAppNames', function(req, res) {
+  setCORSHeaders(res);
+  res.send('Butler SOS reporting for duty.');
+  res.end();
 });
+
+
+
+
+// Handler for REST endpoint /loadedAppNames/search
+// URL parameters
+//   -- None --
+app.all('/loadedAppNames/search', function(req, res){
+  setCORSHeaders(res);
+  var result = [];
+  _.each(timeserie, function(ts) {
+    result.push(ts.target);
+  });
+
+  res.json(result);
+  res.end();
+});
+
+
+
+
+
+// Handler for REST endpoint /loadedAppNames/query
+// URL parameters
+//   -- None --
+app.all('/loadedAppNames/query', function(req, res){
+  setCORSHeaders(res);
+  console.log(req.url);
+  console.log(req.body);
+
+  var tsResult = [];
+  _.each(req.body.targets, function(target) {
+    if (target.type === 'table') {
+      tsResult.push(table);
+    } else {
+      var k = _.filter(timeserie, function(t) {
+        return t.target === target.target;
+      });
+
+      _.each(k, function(kk) {
+        tsResult.push(kk)
+      });
+    }
+  });
+
+  res.json(tsResult);
+  res.end();
+});
+
+
+
+
+// Handler for REST endpoint /loadedAppNames/annotations
+// URL parameters
+//   -- None --
+
+app.all('/loadedAppNames/annotations', function(req, res) {
+  setCORSHeaders(res);
+  console.log(req.url);
+  console.log(req.body);
+
+  res.json(annotations);
+  res.end();
+})
+
+
+app.listen(3333);
+
+
 
 
 setInterval(function () {
     globals.logger.verbose('Event started: Statistics collection');
 
-    var serverList = globals.config.get('Butler-SOS-Influxdb.serversToMonitor.servers');
+    var serverList = globals.config.get('Butler-SOS.serversToMonitor.servers');
     serverList.forEach(function (server) {
         globals.logger.verbose('Getting stats for server: ' + server.serverName);
 
@@ -257,7 +340,7 @@ setInterval(function () {
         getStatsFromSense(server.host, server.serverName);
     });
 
-}, globals.config.get('Butler-SOS-Influxdb.pollingInterval'));
+}, globals.config.get('Butler-SOS.pollingInterval'));
 
 
 

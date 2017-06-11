@@ -1,5 +1,6 @@
 {
     "Butler-SOS-Influxdb": {
+        "logLevel": "verbose",
         "restServer": {
             // Paths to ssl certificate and key used to secure the communication to the REST API. Can be pem or pvk/cer
             "sslCertPath": "/path/to/ssl/cert/client.cer",

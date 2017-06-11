@@ -18,8 +18,8 @@ var logger = new(winston.Logger)({
 
 // Set up Influxdb client
 const influx = new Influx.InfluxDB({
-    host: config.get('Butler-SOS-Influxdb.influxdbConfig.hostIP'),
-    database: config.get('Butler-SOS-Influxdb.influxdbConfig.dbName'),
+    host: config.get('Butler-SOS.influxdbConfig.hostIP'),
+    database: config.get('Butler-SOS.influxdbConfig.dbName'),
     schema: [
         {
             measurement: 'sense_server',
@@ -103,9 +103,9 @@ const influx = new Influx.InfluxDB({
 
 influx.getDatabaseNames()
     .then(names => {
-        if (!names.includes(config.get('Butler-SOS-Influxdb.influxdbConfig.dbName'))) {
+        if (!names.includes(config.get('Butler-SOS.influxdbConfig.dbName'))) {
             logger.info('Creating Influx database.');
-            return influx.createDatabase(config.get('Butler-SOS-Influxdb.influxdbConfig.dbName'));
+            return influx.createDatabase(config.get('Butler-SOS.influxdbConfig.dbName'));
         }
     })
     .then(() => {
@@ -120,7 +120,7 @@ influx.getDatabaseNames()
 
 // ------------------------------------
 // Create MQTT client object and connect to MQTT broker
-var mqttClient = mqtt.connect('mqtt://' + config.get('Butler-SOS-Influxdb.mqttConfig.brokerIP'));
+var mqttClient = mqtt.connect('mqtt://' + config.get('Butler-SOS.mqttConfig.brokerIP'));
 /*
 Following might be needed for conecting to older Mosquitto versions
 var mqttClient  = mqtt.connect('mqtt://<IP of MQTT server>', {

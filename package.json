@@ -24,8 +24,11 @@
   },
   "homepage": "https://github.com/mountaindude/butler-sos#readme",
   "dependencies": {
+    "body-parser": "^1.17.2",
     "config": "^1.25.1",
+    "express": "^4.15.3",
     "influx": "^5.0.0-alpha.4",
+    "loadash": "0.0.1",
     "mqtt": "^2.5.0",
     "request": "^2.81.0",
     "winston": "^2.3.1"
