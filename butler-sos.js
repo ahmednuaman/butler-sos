@@ -1,5 +1,6 @@
 // Add dependencies
 var request = require('request');
+var restify = require('restify');
 
 
 // Load code from sub modules
@@ -13,6 +14,8 @@ globals.logger.transports.console.level = 'verbose';
 // globals.logger.transports.console.level = 'debug';
 
 globals.logger.info('Starting Butler SOS/Influxdb');
+
+
 
 
 
@@ -214,6 +217,35 @@ function getStatsFromSense(host, serverName) {
 
 
 
+
+
+
+var restServer = restify.createServer({
+    name: 'Butler SOS',
+    version: '1.0.0',
+    certificate: fs.readFileSync(config.get('sslCertPath')),
+    key: fs.readFileSync(config.get('sslCertKeyPath'))
+});
+
+
+// Enable parsing of http parameters
+restServer.use(restify.queryParser());
+
+// Set up CORS handling
+restServer.use(restify.CORS({ origins: ['*'] }));
+
+// Set up endpoints for REST server
+restServer.get('/duplicateNewScript', respondDuplicateNewScript);
+restServer.get('/duplicateKeepScript', respondDuplicateKeepScript);
+restServer.get('/getTemplateList', respondGetTemplateList);
+
+
+// Start the server
+restServer.listen(8001, function () {
+    console.log('%s listening at %s', restServer.name, restServer.url);
+});
+
+
 setInterval(function () {
     globals.logger.verbose('Event started: Statistics collection');
 
@@ -226,3 +258,7 @@ setInterval(function () {
     });
 
 }, globals.config.get('Butler-SOS-Influxdb.pollingInterval'));
+
+
+
+
