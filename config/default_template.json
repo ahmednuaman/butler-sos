@@ -1,22 +1,29 @@
 {
-    "Butler-SOS-Influxdb": {
+    "Butler-SOS": {
+        // Possible log levels are silly, debug, verbose, info, warn, error
         "logLevel": "verbose",
-        "restServer": {
-            // Paths to ssl certificate and key used to secure the communication to the REST API. Can be pem or pvk/cer
-            "sslCertPath": "/path/to/ssl/cert/client.cer",
-            "sslCertKeyPath": "/path/to/ssl/cert/client_key.pvk"
+
+        "qrs": {
+            // Paths to client certificates to use when connecting to Sense server. Can be pem or pvk/cer
+            "clientCertPath": "/Users/goran/code/spotify/cert_store/sensedev1eu/client.pem",
+            "clientCertKeyPath": "/Users/goran/code/spotify/cert_store/sensedev1eu/client_key.pem"
         },
+
         "mqttConfig": {
             "enableMQTT": true,
             "brokerIP": "<IP of MQTT server>",
             "baseTopic": "butler-sos/"
         },
+
         "influxdbConfig": {
             "enableInfluxdb": true,
             "hostIP": "<IP or FQDN of Influxdb server>",
             "dbName": "SenseOps"
         },
+
+        // How often (milliseconds) should the healthcheck API be polled? 
         "pollingInterval": 5000,
+
         "serversToMonitor": {
             "servers": [{
                     "host": "<server1.my.domain>",

@@ -18,10 +18,13 @@ var globals = require('./globals');
 // Set specific log level (if/when needed)
 // Possible values are { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
 // globals.logger.transports.console.level = 'info';
-globals.logger.transports.console.level = 'verbose';
+// globals.logger.transports.console.level = 'verbose';
 // globals.logger.transports.console.level = 'debug';
+// Default is to use log level defined in config file
+globals.logger.transports.console.level = globals.config.get('Butler-SOS.logLevel');
 
 globals.logger.info('Starting Butler SOS');
+globals.logger.info('Log level is: ' + globals.logger.transports.console.level);
 
 
 
@@ -145,7 +148,7 @@ function postToInfluxdb(host, serverName, body) {
 
         ])
         .then(err => {
-            globals.logger.verbose('Sent data to Influxdb');
+            globals.logger.verbose('Sent data to Influxdb: ' + serverName);
         })
 
         .catch(err => {
@@ -157,7 +160,7 @@ function postToInfluxdb(host, serverName, body) {
 
 function postToMQTT(host, serverName, body) {
 
-    // Get base MQT topic
+    // Get base MQTT topic
     var baseTopic = globals.config.get('Butler-SOS.mqttConfig.baseTopic');
 
     // Send to MQTT
@@ -183,7 +186,6 @@ function postToMQTT(host, serverName, body) {
 
     if (body.cache.lookups > 0) {
         globals.mqttClient.publish(baseTopic + serverName + '/cache/hit_ratio', Math.floor(body.cache.hits / body.cache.lookups * 100).toString());
-        // console.log(Math.floor(body.cache.hits / body.cache.lookups * 100).toString());
     }
 }
 
@@ -193,7 +195,7 @@ function postToMQTT(host, serverName, body) {
 function getStatsFromSense(host, serverName) {
     request({
         followAllRedirects: true,
-        url: 'https://' + host + '/healthcheck/engine/healthcheck/',
+        url: 'https://' + host + '/engine/healthcheck/',
         headers: {
             'Cache-Control': 'no-cache'
         },
@@ -209,123 +211,20 @@ function getStatsFromSense(host, serverName) {
             globals.logger.verbose('Received ok response from ' + serverName);
             globals.logger.debug(body);
 
-            // globals.logger.info(body.apps.loaded_docs.length);
+            // Post to MQTT (if enabled)
+            if ( globals.config.get('Butler-SOS.mqttConfig.enableMQTT') ) {
+                globals.logger.debug('Calling MQTT posting method');
+                postToMQTT(host, serverName, body);
+            }
 
-            // Post to MQTT
-            postToMQTT(host, serverName, body);
-
-            // Post to Influxdb
-            postToInfluxdb(host, serverName, body);
+            // Post to Influxdb (if enabled)
+            if ( globals.config.get('Butler-SOS.influxdbConfig.enableInfluxdb') ) {
+                globals.logger.debug('Calling Influxdb posting method');
+                postToInfluxdb(host, serverName, body);
+            }
         }
     })
 }
-
-
-
-
-
-var restServer = restify.createServer({
-    name: 'Butler SOS Loaded apps REST API',
-    version: '1.0.0',
-    certificate: fs.readFileSync(config.get('Butler-SOS.restServer.sslCertPath')),
-    key: fs.readFileSync(config.get('Butler-SOS.restServer.sslCertKeyPath'))
-});
-
-
-// Set up endpoints for REST server
-restServer.get('/loadedAppNames', respondAppName);
-restServer.get('/loadedAppNames/search', respondAppName_Search);
-restServer.get('/loadedAppNames/query', respondAppName_Query);
-restServer.get('/loadedAppNames/annotations', respondAppName_Annotation);
-
-
-function setCORSHeaders(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST");
-  res.setHeader("Access-Control-Allow-Headers", "accept, content-type");  
-}
-
-
-
-
-
-
-// Handler for REST endpoint /loadedAppNames
-// URL parameters
-//   -- None --
-app.all('/loadedAppNames', function(req, res) {
-  setCORSHeaders(res);
-  res.send('Butler SOS reporting for duty.');
-  res.end();
-});
-
-
-
-
-// Handler for REST endpoint /loadedAppNames/search
-// URL parameters
-//   -- None --
-app.all('/loadedAppNames/search', function(req, res){
-  setCORSHeaders(res);
-  var result = [];
-  _.each(timeserie, function(ts) {
-    result.push(ts.target);
-  });
-
-  res.json(result);
-  res.end();
-});
-
-
-
-
-
-// Handler for REST endpoint /loadedAppNames/query
-// URL parameters
-//   -- None --
-app.all('/loadedAppNames/query', function(req, res){
-  setCORSHeaders(res);
-  console.log(req.url);
-  console.log(req.body);
-
-  var tsResult = [];
-  _.each(req.body.targets, function(target) {
-    if (target.type === 'table') {
-      tsResult.push(table);
-    } else {
-      var k = _.filter(timeserie, function(t) {
-        return t.target === target.target;
-      });
-
-      _.each(k, function(kk) {
-        tsResult.push(kk)
-      });
-    }
-  });
-
-  res.json(tsResult);
-  res.end();
-});
-
-
-
-
-// Handler for REST endpoint /loadedAppNames/annotations
-// URL parameters
-//   -- None --
-
-app.all('/loadedAppNames/annotations', function(req, res) {
-  setCORSHeaders(res);
-  console.log(req.url);
-  console.log(req.body);
-
-  res.json(annotations);
-  res.end();
-})
-
-
-app.listen(3333);
-
 
 
 
@@ -341,7 +240,3 @@ setInterval(function () {
     });
 
 }, globals.config.get('Butler-SOS.pollingInterval'));
-
-
-
-

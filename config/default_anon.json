@@ -1,0 +1,39 @@
+{
+    "Butler-SOS": {
+        "logLevel": "verbose",
+        "restServer": {
+            // Paths to ssl certificate and key used to secure the communication to the duplicate server. Can be pem or pvk/cer
+            "sslCertPath": "/Users/goran/code/spotify/cert_store/spotify.net/star.cer",
+            "sslCertKeyPath": "/Users/goran/code/spotify/cert_store/spotify.net/star.pvk"
+        },
+        "mqttConfig": {
+            "enableMQTT": true,
+            "brokerIP": "localhost",
+            "baseTopic": "butler-sos/"
+        },
+        "influxdbConfig": {
+            "enableInfluxdb": true,
+            "hostIP": "localhost",
+            "dbName": "SenseOps"
+        },
+        "pollingInterval": 10000,
+        "serversToMonitor": {
+            "servers": [{
+                    "host": "server1.spotify.net/healthcheck",
+                    "serverName": "Server 1",
+                    "availableRAM": 32000
+                },
+                {
+                    "host": "server2.spotify.net/healthcheck",
+                    "serverName": "Server 2",
+                    "availableRAM": 24000
+                },
+                {
+                    "host": "server3.spotify.net/healthcheck",
+                    "serverName": "Server 3",
+                    "availableRAM": 64000
+                }
+            ]
+        }
+    }
+}
